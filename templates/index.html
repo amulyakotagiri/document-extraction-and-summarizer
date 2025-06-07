@@ -1,0 +1,250 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Handwritten Summary Tool</title>
+</head>
+<body>
+    <h2>Upload Handwritten PDF</h2>
+    <form id="upload-form" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".jpg" required><br><br>
+        <select name="template_id">
+            <option value="1">Patient Visit Summary</option>
+            <option value="2">Medical Case Notes</option>
+            <option value="3">Historical Record Summary</option>
+        </select><br><br>
+        <button type="submit">Submit</button>
+    </form>
+    <pre id="output"></pre>
+
+    <script>
+    document.getElementById('upload-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const res = await fetch('/process/', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        document.getElementById('output').textContent = 
+            "Extracted Text:\n" + data.extracted_text + 
+            "\n\nFormatted Summary:\n" + data.summary;
+    };
+    </script>
+</body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Handwritten Summary Tool</title>
+  <style>
+    /* — Reset & Base — */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: #f0f2f5;
+      color: #333;
+      line-height: 1.5;
+      padding: 20px;
+    }
+
+    /* — Container — */
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      padding: 24px;
+    }
+    .container h2 {
+      text-align: center;
+      margin-bottom: 24px;
+      font-size: 1.6rem;
+      color: #222;
+    }
+
+    /* — Form Layout — */
+    form {
+      display: flex;
+      flex-direction: column;
+    }
+    form > * + * {
+      margin-top: 16px;
+    }
+    label {
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    /* — File Input Styling — */
+    .file-input {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+    }
+    .file-input input[type="file"] {
+      position: absolute;
+      left: 0; top: 0;
+      opacity: 0;
+      width: 100%; height: 100%;
+      cursor: pointer;
+    }
+    .file-input .btn {
+      display: inline-block;
+      padding: 10px 16px;
+      background: #007acc;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: background 0.2s ease;
+    }
+    .file-input .btn:hover {
+      background: #005fa3;
+    }
+    .file-input .filename {
+      margin-left: 12px;
+      font-size: 0.9rem;
+      vertical-align: middle;
+      color: #555;
+      word-break: break-all;
+    }
+
+    /* — Select & Button — */
+    select, button[type="submit"] {
+      padding: 10px 12px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      outline: none;
+    }
+    select:focus, button:focus {
+      border-color: #007acc;
+    }
+    button[type="submit"] {
+      background: #007acc;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    button[type="submit"]:hover {
+      background: #005fa3;
+    }
+
+    /* — Output Box — */
+    #output {
+      white-space: pre-wrap;
+      background: #f7f9fc;
+      border: 1px solid #dde4eb;
+      border-radius: 4px;
+      padding: 16px;
+      height: 200px;
+      overflow-y: auto;
+      font-family: Consolas, monospace;
+      font-size: 0.9rem;
+    }
+
+    /* — Responsive — */
+    @media (max-width: 480px) {
+      .container { padding: 16px; }
+      #output { height: 150px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>Upload Handwritten PDF</h2>
+    <form id="upload-form" enctype="multipart/form-data">
+      <div>
+        <label for="file">Choose File</label><br>
+        <div class="file-input">
+          <button type="button" class="btn">Browse…</button>
+          <input
+            type="file"
+            id="file"
+            name="file"
+            accept=".pdf,image/*"
+            required
+          >
+          <span class="filename" id="file-name">No file chosen</span>
+        </div>
+      </div>
+
+      <div>
+        <label for="template_id">Select Template</label><br>
+        <select id="template_id" name="template_id" required>
+          <option value="" disabled selected>-- choose --</option>
+          <option value="1">Patient Visit Summary</option>
+          <option value="2">Medical Case Notes</option>
+          <option value="3">Historical Record Summary</option>
+        </select>
+      </div>
+
+      <button type="submit" id="submit-btn">
+      <span class="btn-text">Summarize</span>
+      <span class="spinner" id="spinner" style="display:none;"></span>
+      </button>
+
+    </form>
+
+    <div id="output" aria-live="polite">Results will appear here…</div>
+  </div>
+
+<script>
+  // File-picker logic
+  const fileInput       = document.getElementById('file');
+  const fileNameDisplay = document.getElementById('file-name');
+  const fileBtn         = document.querySelector('.file-input .btn');
+  fileBtn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => {
+    fileNameDisplay.textContent = fileInput.files.length
+      ? fileInput.files[0].name
+      : 'No file chosen';
+  });
+
+  // Submission + loading-state logic
+  const form    = document.getElementById('upload-form');
+  const btn     = document.getElementById('submit-btn');
+  const btnText = btn.querySelector('.btn-text');
+  const spinner = document.getElementById('spinner');
+  const output  = document.getElementById('output');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    // show loading
+    btn.disabled            = true;
+    btnText.textContent     = 'Processing…';
+    spinner.style.display   = 'inline-block';
+
+    try {
+      const res  = await fetch('/process/', {
+        method: 'POST',
+        body: new FormData(form)
+      });
+      const data = await res.json();
+      output.textContent =
+        data.summary;
+    //   output.textContent =
+    //     "Extracted Text:\n"   + data.extracted_text +
+    //     "\n\nFormatted Summary:\n" + data.summary;
+    } catch (err) {
+      output.textContent = 'Error: ' + err.message;
+    } finally {
+      // restore button
+      spinner.style.display   = 'none';
+      btnText.textContent     = 'Summarize';
+      btn.disabled            = false;
+    }
+  });
+</script>
+
+
+</body>
+</html>

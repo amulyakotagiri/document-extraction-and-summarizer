@@ -1,0 +1,8 @@
+accelerate
+transformers
+qwen-vl-utils
+torch
+torchvision
+fastapi
+uvicorn
+jinja2
